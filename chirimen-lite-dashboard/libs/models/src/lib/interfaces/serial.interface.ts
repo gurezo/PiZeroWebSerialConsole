@@ -1,0 +1,16 @@
+export interface SerialPortOptions {
+  baudRate: number;
+}
+
+export interface SerialPort {
+  open(options: SerialPortOptions): Promise<void>;
+  close(): Promise<void>;
+  readable: ReadableStream;
+  writable: WritableStream;
+}
+
+export interface Navigator extends globalThis.Navigator {
+  serial: {
+    requestPort(): Promise<SerialPort>;
+  };
+}

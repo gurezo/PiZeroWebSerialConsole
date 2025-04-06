@@ -1,0 +1,9 @@
+{
+  "name": "editor-e2e",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "editor-e2e/src",
+  "implicitDependencies": ["editor"],
+  "// targets": "to see all targets run: nx show project editor-e2e --web",
+  "targets": {}
+}
