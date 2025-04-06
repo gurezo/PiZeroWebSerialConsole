@@ -1,3 +1,5 @@
+/// <reference types="@types/w3c-web-serial" />
+
 export interface SerialPortOptions {
   baudRate: number;
 }
@@ -10,7 +12,5 @@ export interface SerialPort {
 }
 
 export interface Navigator extends globalThis.Navigator {
-  serial: {
-    requestPort(): Promise<SerialPort>;
-  };
+  serial: Serial;
 }

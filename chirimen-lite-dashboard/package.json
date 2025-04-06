@@ -44,6 +44,7 @@
     "@swc/helpers": "~0.5.11",
     "@types/jest": "^29.5.12",
     "@types/node": "18.16.9",
+    "@types/w3c-web-serial": "^1.0.8",
     "@types/xterm": "^2.0.3",
     "@typescript-eslint/utils": "^8.19.0",
     "angular-eslint": "^19.2.0",
