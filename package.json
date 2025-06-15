@@ -1,0 +1,24 @@
+{
+  "name": "pizerowebserialconsole",
+  "version": "1.0.0",
+  "description": "<p align=\"right\">Language: <a href=\"https://chirimen.org/PiZeroWebSerialConsole/\">Japanese</a>, <a href=\"https://translate.google.co.jp/translate?sl=ja&tl=en&u=https%3A%2F%2Fchirimen.org%2FPiZeroWebSerialConsole%2F\">English (Google Translation)</a></p>",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gurezo/PiZeroWebSerialConsole.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gurezo/PiZeroWebSerialConsole/issues"
+  },
+  "homepage": "https://github.com/gurezo/PiZeroWebSerialConsole#readme",
+  "devDependencies": {
+    "@types/w3c-web-serial": "^1.0.7",
+    "typescript": "^5.3.3"
+  }
+}
