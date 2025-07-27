@@ -21,13 +21,6 @@ export interface SerialPortWrapper {
   writer: WritableStreamDefaultWriter<Uint8Array>;
 }
 
-export interface WaitForSerialIn {
-  inputValue: string;
-  RegExp: RegExp | null;
-  CBF: ((input: string) => void) | null;
-  TimeOutID: number | null;
-}
-
 export interface SourcePath {
   fileName: string;
   dir: string;

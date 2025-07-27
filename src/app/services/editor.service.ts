@@ -1,9 +1,12 @@
-import { IEditorService } from '../interfaces/editor.interface';
+import { Injectable } from '@angular/core';
 import { SourcePath } from '../types';
 import { sleep } from '../utils/async';
-import { EditorError } from '../utils/errors';
+import { EditorError } from '../utils/serial.errors';
 
-export class EditorService implements IEditorService {
+@Injectable({
+  providedIn: 'root',
+})
+export class EditorService {
   private editor: any; // TODO: Monaco Editorの型を正しく設定
   private editedFlag = false;
   private saveDisabled = false;

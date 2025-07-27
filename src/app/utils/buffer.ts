@@ -1,9 +1,9 @@
-export const str2arrayBuffer = (str: string): ArrayBuffer => {
+export const stringToArrayBuffer = (str: string): ArrayBuffer => {
   const encoder = new TextEncoder();
   return encoder.encode(str).buffer;
 };
 
-export const arrayBuffer2str = (buffer: ArrayBuffer): string => {
+export const arrayBufferToString = (buffer: ArrayBuffer): string => {
   const decoder = new TextDecoder();
   return decoder.decode(buffer);
 };

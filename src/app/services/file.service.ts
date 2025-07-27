@@ -1,16 +1,21 @@
-import { IFileService } from '../interfaces/file.interface';
-import { ISerialService } from '../interfaces/serial.interface';
+import { Injectable, inject } from '@angular/core';
 import { FileInfo } from '../types';
-import { arrayBuffer2str } from '../utils/buffer';
-import { FileError } from '../utils/errors';
+import { arrayBufferToString } from '../utils/buffer';
+import { FileError } from '../utils/serial.errors';
 import { parseCommandOutput } from '../utils/string';
+import { SerialService } from './serial.service';
 
-export class FileService implements IFileService {
-  constructor(private readonly serialService: ISerialService) {}
+@Injectable({
+  providedIn: 'root',
+})
+export class FileService {
+  private readonly serialService = inject(SerialService);
+
+  constructor() {}
 
   async saveFile(data: ArrayBuffer, fileName: string): Promise<void> {
     try {
-      const dataStr = arrayBuffer2str(data);
+      const dataStr = arrayBufferToString(data);
       await this.serialService.portWritelnWaitfor(
         `cat > ${fileName} << 'EOL'\n${dataStr}\nEOL`,
         'EOL'

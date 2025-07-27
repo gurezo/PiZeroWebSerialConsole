@@ -1,32 +1,117 @@
+# PiZero Web Serial Console - Angular Version
+
 <p align="right">Language: <a href="https://chirimen.org/PiZeroWebSerialConsole/">Japanese</a>, <a href="https://translate.google.co.jp/translate?sl=ja&tl=en&u=https%3A%2F%2Fchirimen.org%2FPiZeroWebSerialConsole%2F">English (Google Translation)</a></p>
 
-# PiZeroWebSerialConsole
+This is an Angular v20.x standalone application version of the PiZero Web Serial Console, originally developed for CHIRIMEN (Web of Things).
 
-PCのUSB端子に接続した[Raspberry Pi Zero](https://www.raspberrypi.org/products/raspberry-pi-zero/)のコンソール(コマンドプロンプト)をWebブラウザから使用できます。
+## Features
 
-* Raspberry Pi ZeroのUSB OTGシリアルとWeb Serial APIを使用しているため、IP設定は不要です。(Pi Zero WがWiFi接続されていない状態でも使用可能)
-* 簡易なファイルマネージャ機能があり、PCとRaspberry Piとの間でファイルの送受信ができます。
-* [Monaco Editor](https://microsoft.github.io/monaco-editor/)を搭載、テキストファイルの編集ができます。
-* [Raspberry Pi Zero W](https://www.raspberrypi.org/products/raspberry-pi-zero-w/)のWiFi設定のための専用UIがあります。
-* [Node.jsを使用したCHIRIMEN](https://tutorial.chirimen.org/pizero/)のための専用UIを持ちます。
+- **Serial Communication**: Connect to Raspberry Pi Zero via Web Serial API
+- **File Management**: Browse and manage files on the Pi Zero
+- **WiFi Configuration**: Configure WiFi settings on the Pi Zero
+- **Chirimen Setup**: Automated setup of CHIRIMEN development environment
+- **Code Editor**: Built-in code editor for JavaScript development
+- **I2C Detection**: Detect I2C devices connected to the Pi Zero
 
-## 準備
+## Prerequisites
 
-USB OTG Serialのコンソールが有効化されたRaspberry Pi OSが動作しているRaspberry Pi Zero (W)が必要です。
-* あらかじめUSB OTG Serialのコンソールの有効化を含め、[CHIRIMEN開発環境が設定されたこちらのOSイメージ](https://github.com/kou029w/chirimen-os/releases/)を使うと簡単です。
-* 自分で設定するには、[Raspberry Pi OS Lite](https://www.raspberrypi.org/software/operating-systems/#raspberry-pi-os-32-bit)を導入し、[USB OTG Serialのコンソールを有効化](https://gist.github.com/satakagi/dd34c29b0192540080681e2443258282)します。
-* Note: Pi ZeroのこのポートがUSB OTGポートです。
-![pi zero otg port](imgs/PiZeroW_OTG.JPG)
+- Node.js 18+ and npm
+- Angular CLI 20+
+- Modern browser with Web Serial API support (Chrome, Edge, Opera)
+- Raspberry Pi Zero with OTG cable connection
 
-## 使用
+## Installation
 
-* PCのUSBとRaspberry Pi ZeroのUSB OTGポートをUSBケーブルでつなぎます
-  * PCからのUSB給電でRaspberry Pi Zeroが起動します。
-* PCでRaspberry Pi Zeroが認識されたことを確認します (Windows10のデバイスマネージャの例) 
-  * 起動してUSBデバイスとして出現するまでにしばらく(数十秒)かかります)
-  ![OTG PORT Information on device manager](imgs/OTG_PORT_W10.png)
-* [**こちらのページにブラウザでアクセス**](https://chirimen.org/PiZeroWebSerialConsole/PiZeroWebSerialConsole.html)(Chrome, Edgeで確認)
-* CONNECTボタンを押す
-  * 接続ダイアログが出現
-  ![connection dialog](imgs/SerialDialog.png)
-  * 上で認識したデバイス（ポート番号）を接続する
+1. Clone the repository:
+
+```bash
+git clone https://github.com/gurezo/PiZeroWebSerialConsole.git
+cd PiZeroWebSerialConsole
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Start the development server:
+
+```bash
+npm start
+```
+
+4. Open your browser and navigate to `http://localhost:4200`
+
+## Building for Production
+
+```bash
+npm run build
+```
+
+The built files will be in the `dist/pizerowebserialconsole` directory.
+
+## Usage
+
+1. **Connect to Pi Zero**: Click the "Connect" button and select your Pi Zero from the serial port list
+2. **Browse Files**: Use "Show Directory" to view files on the Pi Zero
+3. **Configure WiFi**: Use "WiFi Status" and "WiFi Scan" to manage network settings
+4. **Setup Chirimen**: Use "Setup Chirimen" to install the CHIRIMEN development environment
+5. **Edit Code**: Use the built-in editor to create and edit JavaScript applications
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── services/           # Angular services
+│   │   ├── serial.service.ts
+│   │   ├── file.service.ts
+│   │   ├── editor.service.ts
+│   │   ├── wifi.service.ts
+│   │   ├── chirimen.service.ts
+│   │   └── serial/         # Serial communication classes
+│   ├── app.component.ts    # Main application component
+│   ├── app.config.ts       # Application configuration
+│   └── app.routes.ts       # Routing configuration
+├── interfaces/             # TypeScript interfaces
+├── types/                  # Type definitions
+├── utils/                  # Utility functions
+├── main.ts                 # Application entry point
+└── index.html              # Main HTML file
+```
+
+## Development
+
+This application uses Angular v20.x with standalone components and services. All services are provided at the root level and can be injected into components as needed.
+
+### Key Services
+
+- **SerialService**: Handles Web Serial API communication
+- **FileService**: Manages file operations on the Pi Zero
+- **EditorService**: Provides code editing functionality
+- **WiFiService**: Manages WiFi configuration
+- **ChirimenService**: Handles CHIRIMEN environment setup
+
+## Browser Compatibility
+
+This application requires a browser that supports the Web Serial API:
+
+- Chrome 89+
+- Edge 89+
+- Opera 76+
+
+## License
+
+ISC License
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## Original Project
+
+This is an Angular port of the original PiZero Web Serial Console project. For the original version, see the [CHIRIMEN website](https://chirimen.org/PiZeroWebSerialConsole/).

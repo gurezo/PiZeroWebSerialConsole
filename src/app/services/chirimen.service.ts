@@ -1,17 +1,16 @@
+import { Injectable, inject } from '@angular/core';
 import { FileInfo } from '../types';
+import { FileService } from './file.service';
+import { SerialService } from './serial.service';
 
+@Injectable({
+  providedIn: 'root',
+})
 export class ChirimenService {
-  private serialService: any; // TODO: SerialServiceの型を正しく設定
-  private fileService: any; // TODO: FileServiceの型を正しく設定
-  private appDir: string;
-  private absAppDir: string;
-
-  constructor(serialService: any, fileService: any) {
-    this.serialService = serialService;
-    this.fileService = fileService;
-    this.appDir = '~/myApp';
-    this.absAppDir = '/home/pi/myApp/';
-  }
+  private serialService = inject(SerialService);
+  private fileService = inject(FileService);
+  private appDir = '~/myApp';
+  private absAppDir = '/home/pi/myApp/';
 
   async setupChirimen(): Promise<string> {
     let message = 'START CHIRIMEN SETUP';

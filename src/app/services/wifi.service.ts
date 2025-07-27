@@ -1,15 +1,18 @@
-import { IFileService } from '../interfaces/file.interface';
-import { ISerialService } from '../interfaces/serial.interface';
-import { IWiFiService } from '../interfaces/wifi.interface';
+import { Injectable, inject } from '@angular/core';
 import { WiFiInfo } from '../types';
-import { str2arrayBuffer } from '../utils/buffer';
-import { WiFiError } from '../utils/errors';
+import { stringToArrayBuffer } from '../utils/buffer';
+import { WiFiError } from '../utils/serial.errors';
+import { FileService } from './file.service';
+import { SerialService } from './serial.service';
 
-export class WiFiService implements IWiFiService {
-  constructor(
-    private serialService: ISerialService,
-    private fileService: IFileService
-  ) {}
+@Injectable({
+  providedIn: 'root',
+})
+export class WiFiService {
+  private serialService = inject(SerialService);
+  private fileService = inject(FileService);
+
+  constructor() {}
 
   async wifiStat(): Promise<{
     ipInfo: string;
@@ -157,7 +160,7 @@ fi
 `;
 
       await this.fileService.saveFile(
-        str2arrayBuffer(wifiSetup),
+        stringToArrayBuffer(wifiSetup),
         'wifi_setup.sh'
       );
       await this.serialService.portWritelnWaitfor(
