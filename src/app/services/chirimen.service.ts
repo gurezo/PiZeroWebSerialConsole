@@ -158,7 +158,7 @@ export class ChirimenService {
   async getJsApps(): Promise<string[]> {
     await this.serialService.portWritelnWaitfor(`cd ${this.absAppDir}`, 'EOL');
     await this.fileService.showDir();
-    const { files } = await this.fileService.lsal();
+    const { files } = await this.fileService.listAll();
     return files
       .filter((file: FileInfo) => file.name.endsWith('.js'))
       .map((file: FileInfo) => file.name);

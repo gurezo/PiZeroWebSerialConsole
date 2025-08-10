@@ -27,7 +27,7 @@ export class FileService {
     }
   }
 
-  async cp(src: string, dst: string): Promise<void> {
+  async copyFile(src: string, dst: string): Promise<void> {
     try {
       await this.serialService.portWritelnWaitfor(`cp ${src} ${dst}`, 'EOL');
     } catch (error: unknown) {
@@ -37,7 +37,7 @@ export class FileService {
     }
   }
 
-  async mv(src: string, dst: string): Promise<void> {
+  async moveFile(src: string, dst: string): Promise<void> {
     try {
       await this.serialService.portWritelnWaitfor(`mv ${src} ${dst}`, 'EOL');
     } catch (error: unknown) {
@@ -47,7 +47,7 @@ export class FileService {
     }
   }
 
-  async lsal(): Promise<{ files: FileInfo[] }> {
+  async listAll(): Promise<{ files: FileInfo[] }> {
     try {
       const output = await this.serialService.portWritelnWaitfor(
         'ls -la',
@@ -84,7 +84,7 @@ export class FileService {
 
   async showDir(): Promise<void> {
     try {
-      const { files } = await this.lsal();
+      const { files } = await this.listAll();
       // TODO: UIの更新処理を実装
       console.log('Files:', files);
     } catch (error: unknown) {
