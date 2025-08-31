@@ -1,8 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { FileInfo } from '../types';
-import { arrayBufferToString } from '../utils/buffer';
+import { ParserUtils } from '../utils';
 import { FileError } from '../utils/serial.errors';
-import { parseCommandOutput } from '../utils/string';
 import { SerialService } from './serial.service';
 
 @Injectable({
@@ -13,7 +12,7 @@ export class FileService {
 
   async saveFile(data: ArrayBuffer, fileName: string): Promise<void> {
     try {
-      const dataStr = arrayBufferToString(data);
+      const dataStr = new TextDecoder().decode(data);
       await this.serialService.portWritelnWaitfor(
         `cat > ${fileName} << 'EOL'\n${dataStr}\nEOL`,
         'EOL'
@@ -31,26 +30,7 @@ export class FileService {
         'ls -la',
         'EOL'
       );
-      const lines = parseCommandOutput(output);
-      const files: FileInfo[] = [];
-
-      for (const line of lines) {
-        if (line.startsWith('total')) continue;
-        if (!line.trim()) continue;
-
-        const parts = line.split(/\s+/);
-        if (parts.length < 9) continue;
-
-        const isDirectory = line.startsWith('d');
-        const size = parseInt(parts[4], 10);
-        const name = parts[8];
-
-        files.push({
-          name,
-          size,
-          isDirectory,
-        });
-      }
+      const files = ParserUtils.parseLsOutput(output);
 
       return { files };
     } catch (error: unknown) {

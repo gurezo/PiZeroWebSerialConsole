@@ -208,8 +208,4 @@ export class SerialService {
       }, 100);
     });
   }
-
-  async sleep(msec: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, msec));
-  }
 }

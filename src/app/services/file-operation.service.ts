@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { CommandUtils } from '../utils';
 import { FileError } from '../utils/serial.errors';
 import { SerialService } from './serial.service';
 
@@ -20,7 +21,7 @@ export class FileOperationService {
   async removeFile(fileName: string): Promise<FileOperationResult> {
     try {
       await this.serialService.portWritelnWaitfor(
-        `rm -- ${this.escapePath(fileName)}`,
+        `rm -- ${CommandUtils.escapePath(fileName)}`,
         'pi@raspberrypi:',
         10000
       );
@@ -45,9 +46,9 @@ export class FileOperationService {
   ): Promise<FileOperationResult> {
     try {
       const sudoHead = useSudo ? 'sudo ' : '';
-      const command = `${sudoHead}mv -- ${this.escapePath(
+      const command = `${sudoHead}mv -- ${CommandUtils.escapePath(
         fromPath
-      )} ${this.escapePath(toPath)}`;
+      )} ${CommandUtils.escapePath(toPath)}`;
       await this.serialService.portWritelnWaitfor(
         command,
         'pi@raspberrypi:',
@@ -74,9 +75,9 @@ export class FileOperationService {
   ): Promise<FileOperationResult> {
     try {
       const sudoHead = useSudo ? 'sudo ' : '';
-      const command = `${sudoHead}cp -- ${this.escapePath(
+      const command = `${sudoHead}cp -- ${CommandUtils.escapePath(
         fromPath
-      )} ${this.escapePath(toPath)}`;
+      )} ${CommandUtils.escapePath(toPath)}`;
       await this.serialService.portWritelnWaitfor(
         command,
         'pi@raspberrypi:',
@@ -102,7 +103,7 @@ export class FileOperationService {
   ): Promise<FileOperationResult> {
     try {
       await this.serialService.portWritelnWaitfor(
-        `chmod ${permissions} -- ${this.escapePath(fileName)}`,
+        `chmod ${permissions} -- ${CommandUtils.escapePath(fileName)}`,
         'pi@raspberrypi:',
         10000
       );
@@ -128,7 +129,7 @@ export class FileOperationService {
     try {
       const groupArg = group ? `:${group}` : '';
       await this.serialService.portWritelnWaitfor(
-        `chown ${owner}${groupArg} -- ${this.escapePath(fileName)}`,
+        `chown ${owner}${groupArg} -- ${CommandUtils.escapePath(fileName)}`,
         'pi@raspberrypi:',
         10000
       );
@@ -152,7 +153,9 @@ export class FileOperationService {
   ): Promise<FileOperationResult> {
     try {
       await this.serialService.portWritelnWaitfor(
-        `mv -- ${this.escapePath(oldName)} ${this.escapePath(newName)}`,
+        `mv -- ${CommandUtils.escapePath(oldName)} ${CommandUtils.escapePath(
+          newName
+        )}`,
         'pi@raspberrypi:',
         10000
       );
@@ -176,7 +179,9 @@ export class FileOperationService {
   ): Promise<FileOperationResult> {
     try {
       await this.serialService.portWritelnWaitfor(
-        `ln -s -- ${this.escapePath(target)} ${this.escapePath(linkName)}`,
+        `ln -s -- ${CommandUtils.escapePath(target)} ${CommandUtils.escapePath(
+          linkName
+        )}`,
         'pi@raspberrypi:',
         10000
       );
@@ -200,7 +205,9 @@ export class FileOperationService {
   ): Promise<FileOperationResult> {
     try {
       await this.serialService.portWritelnWaitfor(
-        `ln -- ${this.escapePath(target)} ${this.escapePath(linkName)}`,
+        `ln -- ${CommandUtils.escapePath(target)} ${CommandUtils.escapePath(
+          linkName
+        )}`,
         'pi@raspberrypi:',
         10000
       );
@@ -221,7 +228,7 @@ export class FileOperationService {
   async showFileAttributes(fileName: string): Promise<string> {
     try {
       const result = await this.serialService.portWritelnWaitfor(
-        `ls -la -- ${this.escapePath(fileName)}`,
+        `ls -la -- ${CommandUtils.escapePath(fileName)}`,
         'pi@raspberrypi:',
         10000
       );
@@ -239,7 +246,7 @@ export class FileOperationService {
   async getFileSize(fileName: string): Promise<number> {
     try {
       const result = await this.serialService.portWritelnWaitfor(
-        `stat --format=%s -- ${this.escapePath(fileName)}`,
+        `stat --format=%s -- ${CommandUtils.escapePath(fileName)}`,
         'pi@raspberrypi:',
         10000
       );
@@ -258,7 +265,7 @@ export class FileOperationService {
   async getFileModificationTime(fileName: string): Promise<Date> {
     try {
       const result = await this.serialService.portWritelnWaitfor(
-        `stat --format=%Y -- ${this.escapePath(fileName)}`,
+        `stat --format=%Y -- ${CommandUtils.escapePath(fileName)}`,
         'pi@raspberrypi:',
         10000
       );
@@ -271,11 +278,5 @@ export class FileOperationService {
         `Failed to get file modification time: ${errorMessage}`
       );
     }
-  }
-
-  // Utility methods
-  private escapePath(path: string): string {
-    const jsonString = JSON.stringify(String(path));
-    return jsonString.replace(/^"/, `$$'`).replace(/"$/, `'`);
   }
 }

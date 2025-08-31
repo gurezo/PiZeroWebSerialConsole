@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { WiFiInfo } from '../types';
-import { stringToArrayBuffer } from '../utils/buffer';
+import { FileUtils, ParserUtils, WiFiUtils } from '../utils';
 import { WiFiError } from '../utils/serial.errors';
 import { FileService } from './file.service';
 import { SerialService } from './serial.service';
@@ -27,45 +27,9 @@ export class WiFiService {
         'EOL'
       );
 
-      let wdf = false;
-      let ipInfo = 'wlan0: ';
-      let wlInfo = '';
-      let ipaddr: string | undefined;
-
-      for (const line of ifconfigOutput.split('\n')) {
-        if (line.indexOf('wlan0:') >= 0) {
-          wdf = true;
-        } else if (line === '') {
-          wdf = false;
-        }
-        if (wdf) {
-          if (line.indexOf('inet ') >= 0) {
-            ipInfo += line + '\n';
-            ipaddr = line;
-          } else if (line.indexOf('ether ') >= 0) {
-            ipInfo +=
-              'MAC Address: ' +
-              line.substring(
-                line.indexOf('ether ') + 6,
-                line.indexOf('txqueuelen')
-              ) +
-              '\n';
-          }
-        }
-      }
-      ipInfo += '\n';
-
-      wdf = false;
-      for (const line of iwconfigOutput.split('\n')) {
-        if (line.indexOf('wlan0') >= 0) {
-          wdf = true;
-        } else if (line === '') {
-          wdf = false;
-        }
-        if (wdf) {
-          wlInfo += line + '\n';
-        }
-      }
+      const { ipInfo, ipaddr } =
+        ParserUtils.parseIfconfigOutput(ifconfigOutput);
+      const wlInfo = ParserUtils.parseIwconfigOutput(iwconfigOutput);
 
       return { ipInfo, wlInfo, ipaddr };
     } catch (error: unknown) {
@@ -82,39 +46,7 @@ export class WiFiService {
         'EOL'
       );
       const lines = output.split('\n');
-      const wifiInfos: WiFiInfo[] = [];
-      let wifiInfo: Partial<WiFiInfo> = {};
-      let first = true;
-
-      for (let i = 1; i < lines.length - 1; i++) {
-        const line = lines[i];
-        if (line.indexOf('Cell') >= 0 && line.indexOf('Address') > 0) {
-          const parts = line.split(/\s+/);
-          if (!first) {
-            wifiInfos.push(wifiInfo as WiFiInfo);
-          } else {
-            first = false;
-          }
-          wifiInfo = { address: parts[4] };
-        } else if (line.indexOf('ESSID:') >= 0) {
-          wifiInfo.essid = line.split(':')[1].trim().replace(/"/g, '');
-        } else if (line.indexOf('IEEE 802.11') >= 0) {
-          wifiInfo.spec = line.split(':')[1].trim();
-        } else if (line.indexOf('Quality') >= 0) {
-          wifiInfo.quality = line.trim();
-        } else if (line.indexOf('Group Cipher') >= 0) {
-          wifiInfo.spec += ',' + line.split(':')[1].trim();
-        } else if (line.indexOf('Pairwise Ciphers') >= 0) {
-          wifiInfo.spec += ',' + line.split(':')[1].trim();
-        } else if (line.indexOf('Authentication Suites') >= 0) {
-          wifiInfo.spec += line.split(':')[1].trim();
-        } else if (line.indexOf('Frequency:') >= 0) {
-          wifiInfo.frequency = line.split(':')[1].trim();
-        } else if (line.indexOf('Channel:') >= 0) {
-          wifiInfo.channel = line.split(':')[1].trim();
-        }
-      }
-      wifiInfos.push(wifiInfo as WiFiInfo);
+      const wifiInfos = ParserUtils.parseIwlistOutput(output);
 
       return { rawData: lines, wifiInfos };
     } catch (error: unknown) {
@@ -157,8 +89,9 @@ else
 fi
 `;
 
+      const encoder = new TextEncoder();
       await this.fileService.saveFile(
-        stringToArrayBuffer(wifiSetup),
+        encoder.encode(wifiSetup).buffer,
         'wifi_setup.sh'
       );
       await this.serialService.portWritelnWaitfor(
@@ -187,7 +120,10 @@ fi
   async configureWifi(ssid: string, password: string): Promise<void> {
     try {
       // wpa_supplicant設定ファイルを作成
-      const configContent = this.generateWpaSupplicantConfig(ssid, password);
+      const configContent = WiFiUtils.generateWpaSupplicantConfig(
+        ssid,
+        password
+      );
 
       // 設定ファイルを保存
       await this.saveWifiConfig(configContent);
@@ -199,18 +135,6 @@ fi
         error instanceof Error ? error.message : 'Unknown error';
       throw new WiFiError(`WiFi configuration failed: ${errorMessage}`);
     }
-  }
-
-  private generateWpaSupplicantConfig(ssid: string, password: string): string {
-    return `ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
-update_config=1
-country=JP
-
-network={
-    ssid="${ssid}"
-    psk="${password}"
-    key_mgmt=WPA-PSK
-}`;
   }
 
   private async saveWifiConfig(configContent: string): Promise<void> {
@@ -227,11 +151,10 @@ network={
       const buffer = encoder.encode(configContent);
 
       // base64エンコードして送信
-      const base64 = this.arrayBufferToBase64(buffer);
+      const base64 = FileUtils.arrayBufferToBase64(buffer);
 
       // Ctrl+Cでフォアグラウンドプロセスを停止
-      await this.serialService.write('\x03');
-      await this.sleep(100);
+      await FileUtils.prepareForFileOperation(this.serialService);
 
       // 設定ファイルに保存
       await this.serialService.portWritelnWaitfor(
@@ -242,8 +165,7 @@ network={
       await this.serialService.portWritelnWaitfor(base64, '\n', 1000);
 
       // Ctrl+Dで入力終了
-      await this.serialService.write('\x04');
-      await this.sleep(10);
+      await FileUtils.finalizeFileOperation(this.serialService);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
@@ -342,18 +264,5 @@ network={
         error instanceof Error ? error.message : 'Unknown error';
       throw new WiFiError(`Failed to show network config: ${errorMessage}`);
     }
-  }
-
-  private arrayBufferToBase64(buffer: ArrayBuffer): string {
-    const bytes = new Uint8Array(buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary);
-  }
-
-  private async sleep(msec: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, msec));
   }
 }

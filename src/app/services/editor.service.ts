@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { SourcePath } from '../types';
-import { sleep } from '../utils/async';
+import { sleep } from '../utils';
 import { EditorError } from '../utils/serial.errors';
 
 @Injectable({

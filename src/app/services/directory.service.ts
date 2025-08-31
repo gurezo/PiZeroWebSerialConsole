@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { CommandUtils, ParserUtils } from '../utils';
 import { FileError } from '../utils/serial.errors';
 import { SerialService } from './serial.service';
 
@@ -25,7 +26,7 @@ export class DirectoryService {
         'pi@raspberrypi:',
         10000
       );
-      const lines = this.getOutputLines(result);
+      const lines = ParserUtils.parseOutputLines(result);
       this.absolutePath = lines[lines.length - 1];
       this.currentDir = this.getDirFromPrompt(this.absolutePath);
       return this.currentDir;
@@ -41,7 +42,7 @@ export class DirectoryService {
    */
   async changeDirectory(dir?: string): Promise<string> {
     try {
-      const cdStr = dir ? `cd -- ${this.escapePath(dir)}` : 'cd --';
+      const cdStr = dir ? `cd -- ${CommandUtils.escapePath(dir)}` : 'cd --';
       await this.serialService.portWritelnWaitfor(
         cdStr,
         'pi@raspberrypi:',
@@ -70,7 +71,7 @@ export class DirectoryService {
   async navigateToDirectory(path: string): Promise<string> {
     try {
       const result = await this.serialService.portWritelnWaitfor(
-        `cd -- ${this.escapePath(path)}`,
+        `cd -- ${CommandUtils.escapePath(path)}`,
         'pi@raspberrypi:',
         10000
       );
@@ -88,7 +89,7 @@ export class DirectoryService {
   async createDirectory(dirName: string): Promise<void> {
     try {
       await this.serialService.portWritelnWaitfor(
-        `mkdir -- ${this.escapePath(dirName)}`,
+        `mkdir -- ${CommandUtils.escapePath(dirName)}`,
         'pi@raspberrypi:',
         10000
       );
@@ -109,7 +110,7 @@ export class DirectoryService {
     try {
       const flag = recursive ? '-r ' : '';
       await this.serialService.portWritelnWaitfor(
-        `rmdir ${flag}-- ${this.escapePath(dirName)}`,
+        `rmdir ${flag}-- ${CommandUtils.escapePath(dirName)}`,
         'pi@raspberrypi:',
         10000
       );
@@ -129,7 +130,7 @@ export class DirectoryService {
   ): Promise<void> {
     try {
       await this.serialService.portWritelnWaitfor(
-        `chmod ${permissions} -- ${this.escapePath(dirName)}`,
+        `chmod ${permissions} -- ${CommandUtils.escapePath(dirName)}`,
         'pi@raspberrypi:',
         10000
       );
@@ -153,7 +154,7 @@ export class DirectoryService {
     try {
       const groupArg = group ? `:${group}` : '';
       await this.serialService.portWritelnWaitfor(
-        `chown ${owner}${groupArg} -- ${this.escapePath(dirName)}`,
+        `chown ${owner}${groupArg} -- ${CommandUtils.escapePath(dirName)}`,
         'pi@raspberrypi:',
         10000
       );
@@ -189,19 +190,9 @@ export class DirectoryService {
   }
 
   // Utility methods
-  private getOutputLines(str: string): string[] {
-    const lines = str.split('\n');
-    return lines.map((line) => line.trim());
-  }
-
   private getDirFromPrompt(promptStr: string): string {
     return promptStr
       .trim()
       .substring(promptStr.lastIndexOf(':') + 1, promptStr.lastIndexOf('$'));
-  }
-
-  private escapePath(path: string): string {
-    const jsonString = JSON.stringify(String(path));
-    return jsonString.replace(/^"/, `$$'`).replace(/"$/, `'`);
   }
 }

@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { CommandUtils, FileUtils, ParserUtils, sleep } from '../utils';
 import { FileError } from '../utils/serial.errors';
 import { SerialService } from './serial.service';
 
@@ -13,23 +14,6 @@ export interface FileContentInfo {
   providedIn: 'root',
 })
 export class FileContentService {
-  private readonly textFileExtensions = [
-    '.txt',
-    '.sh',
-    '.csv',
-    '.tsv',
-    '.js',
-    '.conf',
-    '.mjs',
-    '.md',
-    '.yml',
-    '.xml',
-    '.html',
-    '.htm',
-    '.json',
-    '.py',
-    '.php',
-  ];
   private readonly serialService = inject(SerialService);
 
   /**
@@ -38,11 +22,11 @@ export class FileContentService {
   async getFileContent(path: string, size?: number): Promise<FileContentInfo> {
     try {
       const result = await this.serialService.portWritelnWaitfor(
-        `base64 -- ${this.escapePath(path)}`,
+        `base64 -- ${CommandUtils.escapePath(path)}`,
         'pi@raspberrypi:',
         30000
       );
-      const lines = this.getOutputLines(result);
+      const lines = result.split('\n').map((line) => line.trim());
       let content = '';
 
       // 最初と最後の行を除いて内容を結合
@@ -50,8 +34,8 @@ export class FileContentService {
         content += lines[i];
       }
 
-      const buffer = this.base64ToArrayBuffer(content);
-      const isText = await this.isTextFile(path);
+      const buffer = FileUtils.base64ToArrayBuffer(content);
+      const isText = FileUtils.isTextFile(path);
 
       if (isText) {
         const textContent = new TextDecoder().decode(new Uint8Array(buffer));
@@ -76,28 +60,16 @@ export class FileContentService {
   }
 
   /**
-   * ファイルがテキストファイルかチェック
-   */
-  async isTextFile(path: string): Promise<boolean> {
-    const fileName = path.substring(path.lastIndexOf('/'));
-    const extension = fileName.substring(fileName.lastIndexOf('.'));
-    const name = fileName.substring(0, fileName.lastIndexOf('.'));
-
-    if (name === '') {
-      return true;
-    }
-
-    return this.textFileExtensions.includes(extension);
-  }
-
-  /**
    * テキストファイルの内容を保存
    */
   async saveTextFile(content: string, fileName: string): Promise<void> {
     try {
       const dataStr = content;
       await this.serialService.portWritelnWaitfor(
-        `cat > ${this.escapePath(fileName)} << 'EOL'\n${dataStr}\nEOL`,
+        FileUtils.generateHeredocCommand(
+          CommandUtils.escapePath(fileName),
+          dataStr
+        ),
         'EOL'
       );
     } catch (error: unknown) {
@@ -112,15 +84,14 @@ export class FileContentService {
    */
   async saveBinaryFile(buffer: ArrayBuffer, fileName: string): Promise<void> {
     try {
-      const base64 = this.arrayBufferToBase64(buffer);
+      const base64 = FileUtils.arrayBufferToBase64(buffer);
 
       // Ctrl+Cでフォアグラウンドプロセスを停止
-      await this.serialService.write('\x03');
-      await this.sleep(100);
+      await FileUtils.prepareForFileOperation(this.serialService);
 
       // base64デコードコマンドを実行
       await this.serialService.portWritelnWaitfor(
-        `base64 -d > ${this.escapePath(fileName)}`,
+        `base64 -d > ${CommandUtils.escapePath(fileName)}`,
         '\n',
         10000
       );
@@ -130,12 +101,11 @@ export class FileContentService {
       for (let i = 0; i <= Math.floor(base64.length / lineLength); i++) {
         const line = base64.substring(i * lineLength, (i + 1) * lineLength);
         await this.serialService.portWritelnWaitfor(line, '\n', 1000);
-        await this.sleep(1);
+        await sleep(1);
       }
 
       // Ctrl+Dで入力終了
-      await this.serialService.write('\x04');
-      await this.sleep(10);
+      await FileUtils.finalizeFileOperation(this.serialService);
       await this.serialService.portWritelnWaitfor('', '\\$', 1000);
     } catch (error: unknown) {
       const errorMessage =
@@ -150,7 +120,10 @@ export class FileContentService {
   async appendToFile(content: string, fileName: string): Promise<void> {
     try {
       await this.serialService.portWritelnWaitfor(
-        `cat >> ${this.escapePath(fileName)} << 'EOL'\n${content}\nEOL`,
+        FileUtils.generateAppendCommand(
+          CommandUtils.escapePath(fileName),
+          content
+        ),
         'EOL'
       );
     } catch (error: unknown) {
@@ -166,13 +139,13 @@ export class FileContentService {
   async searchInFile(fileName: string, searchTerm: string): Promise<string[]> {
     try {
       const result = await this.serialService.portWritelnWaitfor(
-        `grep -n "${searchTerm}" ${this.escapePath(
+        `grep -n "${searchTerm}" ${CommandUtils.escapePath(
           fileName
         )} || echo "No matches found"`,
         'pi@raspberrypi:',
         10000
       );
-      const lines = this.getOutputLines(result);
+      const lines = ParserUtils.parseOutputLines(result);
       return lines.filter((line) => line !== 'No matches found');
     } catch (error: unknown) {
       const errorMessage =
@@ -187,7 +160,7 @@ export class FileContentService {
   async getLineCount(fileName: string): Promise<number> {
     try {
       const result = await this.serialService.portWritelnWaitfor(
-        `wc -l < ${this.escapePath(fileName)}`,
+        `wc -l < ${CommandUtils.escapePath(fileName)}`,
         'pi@raspberrypi:',
         10000
       );
@@ -206,7 +179,7 @@ export class FileContentService {
   async getFileLine(fileName: string, lineNumber: number): Promise<string> {
     try {
       const result = await this.serialService.portWritelnWaitfor(
-        `sed -n '${lineNumber}p' ${this.escapePath(fileName)}`,
+        `sed -n '${lineNumber}p' ${CommandUtils.escapePath(fileName)}`,
         'pi@raspberrypi:',
         10000
       );
@@ -227,11 +200,11 @@ export class FileContentService {
   ): Promise<string[]> {
     try {
       const result = await this.serialService.portWritelnWaitfor(
-        `head -n ${lineCount} ${this.escapePath(fileName)}`,
+        `head -n ${lineCount} ${CommandUtils.escapePath(fileName)}`,
         'pi@raspberrypi:',
         10000
       );
-      return this.getOutputLines(result);
+      return ParserUtils.parseOutputLines(result);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
@@ -248,11 +221,11 @@ export class FileContentService {
   ): Promise<string[]> {
     try {
       const result = await this.serialService.portWritelnWaitfor(
-        `tail -n ${lineCount} ${this.escapePath(fileName)}`,
+        `tail -n ${lineCount} ${CommandUtils.escapePath(fileName)}`,
         'pi@raspberrypi:',
         10000
       );
-      return this.getOutputLines(result);
+      return ParserUtils.parseOutputLines(result);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
@@ -266,7 +239,7 @@ export class FileContentService {
   async compareFiles(file1: string, file2: string): Promise<string> {
     try {
       const result = await this.serialService.portWritelnWaitfor(
-        `diff ${this.escapePath(file1)} ${this.escapePath(
+        `diff ${CommandUtils.escapePath(file1)} ${CommandUtils.escapePath(
           file2
         )} || echo "Files are identical"`,
         'pi@raspberrypi:',
@@ -278,38 +251,5 @@ export class FileContentService {
         error instanceof Error ? error.message : 'Unknown error';
       throw new FileError(`Failed to compare files: ${errorMessage}`);
     }
-  }
-
-  // Utility methods
-  private getOutputLines(str: string): string[] {
-    const lines = str.split('\n');
-    return lines.map((line) => line.trim());
-  }
-
-  private escapePath(path: string): string {
-    const jsonString = JSON.stringify(String(path));
-    return jsonString.replace(/^"/, `$$'`).replace(/"$/, `'`);
-  }
-
-  private arrayBufferToBase64(buffer: ArrayBuffer): string {
-    const bytes = new Uint8Array(buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary);
-  }
-
-  private base64ToArrayBuffer(base64: string): ArrayBuffer {
-    const binaryString = atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes.buffer;
-  }
-
-  private async sleep(msec: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, msec));
   }
 }

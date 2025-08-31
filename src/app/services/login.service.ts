@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { DateUtils, sleep } from '../utils';
 import { SerialError } from '../utils/serial.errors';
 import { SerialService } from './serial.service';
 
@@ -70,7 +71,7 @@ export class LoginService {
         if (retryCount >= maxRetries) {
           throw new SerialError('Failed to get prompt after maximum retries');
         }
-        await this.serialService.sleep(1000);
+        await sleep(1000);
       }
     }
   }
@@ -133,28 +134,8 @@ export class LoginService {
    */
   private async setSystemDateTime(commandPrompt: string): Promise<void> {
     const date = new Date();
-    const dateCmd = this.buildDateCommand(date);
+    const dateCmd = DateUtils.buildDateCommand(date);
     await this.serialService.waitForPattern(dateCmd, commandPrompt);
-  }
-
-  /**
-   * 日付コマンドを構築
-   */
-  private buildDateCommand(date: Date): string {
-    const month = this.pad2(date.getMonth() + 1);
-    const day = this.pad2(date.getDate());
-    const hours = this.pad2(date.getHours());
-    const minutes = this.pad2(date.getMinutes());
-    const seconds = this.pad2(date.getSeconds());
-
-    return ` sudo date ${month}${day}${hours}${minutes}${date.getFullYear()}.${seconds}`;
-  }
-
-  /**
-   * 2桁のゼロパディング
-   */
-  private pad2(input: number): string {
-    return ('0' + input).slice(-2);
   }
 
   /**

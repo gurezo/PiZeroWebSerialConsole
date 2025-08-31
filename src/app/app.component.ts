@@ -296,7 +296,8 @@ export class AppComponent implements OnInit {
 
   async isTextFile(path: string): Promise<void> {
     try {
-      const isText = await this.fileContentService.isTextFile(path);
+      const { FileUtils } = await import('./utils');
+      const isText = FileUtils.isTextFile(path);
       this.addOutput(`File ${path} is ${isText ? 'text' : 'binary'}`);
     } catch (error) {
       this.addOutput(`Failed to check file type: ${error}`);

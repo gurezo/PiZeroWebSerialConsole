@@ -3,7 +3,8 @@ export const removeControlChars = (str: string): string => {
 };
 
 export const escapePath = (path: string): string => {
-  return path.replace(/([^A-Za-z0-9_\-\.\/\:])/g, '\\$1');
+  const jsonString = JSON.stringify(String(path));
+  return jsonString.replace(/^"/, `$$'`).replace(/"$/, `'`);
 };
 
 export const parseCommandOutput = (output: string): string[] => {
