@@ -27,26 +27,6 @@ export class FileService {
     }
   }
 
-  async copyFile(src: string, dst: string): Promise<void> {
-    try {
-      await this.serialService.portWritelnWaitfor(`cp ${src} ${dst}`, 'EOL');
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      throw new FileError(`Failed to copy file: ${errorMessage}`);
-    }
-  }
-
-  async moveFile(src: string, dst: string): Promise<void> {
-    try {
-      await this.serialService.portWritelnWaitfor(`mv ${src} ${dst}`, 'EOL');
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      throw new FileError(`Failed to move file: ${errorMessage}`);
-    }
-  }
-
   async listAll(): Promise<{ files: FileInfo[] }> {
     try {
       const output = await this.serialService.portWritelnWaitfor(
@@ -92,5 +72,250 @@ export class FileService {
         error instanceof Error ? error.message : 'Unknown error';
       throw new FileError(`Failed to show directory: ${errorMessage}`);
     }
+  }
+
+  // Directory operations
+  async getCurrentDirectory(): Promise<string> {
+    try {
+      const result = await this.serialService.portWritelnWaitfor(
+        'pwd',
+        'pi@raspberrypi:',
+        10000
+      );
+      const lines = this.getOutputLines(result);
+      return this.getDirFromPrompt(lines[lines.length - 1]);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new FileError(`Failed to get current directory: ${errorMessage}`);
+    }
+  }
+
+  async changeDirectory(dir?: string): Promise<string> {
+    try {
+      const cdStr = dir ? `cd -- ${this.escapePath(dir)}` : 'cd --';
+      await this.serialService.portWritelnWaitfor(
+        cdStr,
+        'pi@raspberrypi:',
+        10000
+      );
+
+      // ディレクトリ変更後に一覧を更新
+      await this.listAll();
+      return await this.getCurrentDirectory();
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new FileError(`Failed to change directory: ${errorMessage}`);
+    }
+  }
+
+  async goHome(): Promise<string> {
+    return this.changeDirectory();
+  }
+
+  // File operations
+  async removeFile(fileName: string): Promise<void> {
+    try {
+      await this.serialService.portWritelnWaitfor(
+        `rm -- ${this.escapePath(fileName)}`,
+        'pi@raspberrypi:',
+        10000
+      );
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new FileError(`Failed to remove file: ${errorMessage}`);
+    }
+  }
+
+  async moveFile(
+    fromPath: string,
+    toPath: string,
+    useSudo: boolean = false
+  ): Promise<void> {
+    try {
+      const sudoHead = useSudo ? 'sudo ' : '';
+      const command = `${sudoHead}mv -- ${this.escapePath(
+        fromPath
+      )} ${this.escapePath(toPath)}`;
+      await this.serialService.portWritelnWaitfor(
+        command,
+        'pi@raspberrypi:',
+        10000
+      );
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new FileError(`Failed to move file: ${errorMessage}`);
+    }
+  }
+
+  async copyFile(
+    fromPath: string,
+    toPath: string,
+    useSudo: boolean = false
+  ): Promise<void> {
+    try {
+      const sudoHead = useSudo ? 'sudo ' : '';
+      const command = `${sudoHead}cp -- ${this.escapePath(
+        fromPath
+      )} ${this.escapePath(toPath)}`;
+      await this.serialService.portWritelnWaitfor(
+        command,
+        'pi@raspberrypi:',
+        10000
+      );
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new FileError(`Failed to copy file: ${errorMessage}`);
+    }
+  }
+
+  async removeFileAndList(fileName: string): Promise<void> {
+    await this.removeFile(fileName);
+    await this.listAll();
+  }
+
+  async fileExists(fileName: string): Promise<boolean> {
+    try {
+      const { files } = await this.listAll();
+      return files.some((file) => file.name === fileName);
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async isTextFile(path: string): Promise<boolean> {
+    const textFileExtensions = [
+      '.txt',
+      '.sh',
+      '.csv',
+      '.tsv',
+      '.js',
+      '.conf',
+      '.mjs',
+      '.md',
+      '.yml',
+      '.xml',
+      '.html',
+      '.htm',
+      '.json',
+      '.py',
+      '.php',
+    ];
+
+    const fileName = path.substring(path.lastIndexOf('/'));
+    const extension = fileName.substring(fileName.lastIndexOf('.'));
+    const name = fileName.substring(0, fileName.lastIndexOf('.'));
+
+    if (name === '') {
+      return true;
+    }
+
+    return textFileExtensions.includes(extension);
+  }
+
+  async getFile(path: string, size?: number): Promise<string | ArrayBuffer> {
+    try {
+      const result = await this.serialService.portWritelnWaitfor(
+        `base64 -- ${this.escapePath(path)}`,
+        'pi@raspberrypi:',
+        30000
+      );
+      const lines = this.getOutputLines(result);
+      let content = '';
+
+      // 最初と最後の行を除いて内容を結合
+      for (let i = 1; i < lines.length - 1; i++) {
+        content += lines[i];
+      }
+
+      const buffer = this.base64ToArrayBuffer(content);
+
+      if (await this.isTextFile(path)) {
+        return new TextDecoder().decode(new Uint8Array(buffer));
+      } else {
+        return buffer;
+      }
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new FileError(`Failed to get file: ${errorMessage}`);
+    }
+  }
+
+  async saveFileBinary(buffer: ArrayBuffer, fileName: string): Promise<void> {
+    try {
+      const base64 = this.arrayBufferToBase64(buffer);
+
+      // Ctrl+Cでフォアグラウンドプロセスを停止
+      await this.serialService.write('\x03');
+      await this.sleep(100);
+
+      // base64デコードコマンドを実行
+      await this.serialService.portWritelnWaitfor(
+        `base64 -d > ${this.escapePath(fileName)}`,
+        '\n',
+        10000
+      );
+
+      // データを送信
+      const lineLength = 512;
+      for (let i = 0; i <= Math.floor(base64.length / lineLength); i++) {
+        const line = base64.substring(i * lineLength, (i + 1) * lineLength);
+        await this.serialService.portWritelnWaitfor(line, '\n', 1000);
+        await this.sleep(1);
+      }
+
+      // Ctrl+Dで入力終了
+      await this.serialService.write('\x04');
+      await this.sleep(10);
+      await this.serialService.portWritelnWaitfor('', '\\$', 1000);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new FileError(`Failed to save file: ${errorMessage}`);
+    }
+  }
+
+  // Utility methods
+  private getOutputLines(str: string): string[] {
+    const lines = str.split('\n');
+    return lines.map((line) => line.trim());
+  }
+
+  private getDirFromPrompt(promptStr: string): string {
+    return promptStr
+      .trim()
+      .substring(promptStr.lastIndexOf(':') + 1, promptStr.lastIndexOf('$'));
+  }
+
+  private escapePath(path: string): string {
+    const jsonString = JSON.stringify(String(path));
+    return jsonString.replace(/^"/, `$$'`).replace(/"$/, `'`);
+  }
+
+  private arrayBufferToBase64(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  private base64ToArrayBuffer(base64: string): ArrayBuffer {
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  private async sleep(msec: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, msec));
   }
 }

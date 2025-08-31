@@ -165,6 +165,16 @@ export class AppComponent implements OnInit {
     }
   }
 
+  async autoLogin(): Promise<void> {
+    try {
+      await this.serialService.autoLogin();
+      this.isConnected = true;
+      this.addOutput('Auto login completed successfully');
+    } catch (error) {
+      this.addOutput(`Auto login failed: ${error}`);
+    }
+  }
+
   async terminateConnection(): Promise<void> {
     try {
       await this.serialService.terminateConnection();
@@ -181,6 +191,152 @@ export class AppComponent implements OnInit {
       this.addOutput('Directory listing completed');
     } catch (error) {
       this.addOutput(`Failed to show directory: ${error}`);
+    }
+  }
+
+  async getCurrentDirectory(): Promise<void> {
+    try {
+      const currentDir = await this.fileService.getCurrentDirectory();
+      this.addOutput(`Current directory: ${currentDir}`);
+    } catch (error) {
+      this.addOutput(`Failed to get current directory: ${error}`);
+    }
+  }
+
+  async changeDirectory(dir?: string): Promise<void> {
+    try {
+      const newDir = await this.fileService.changeDirectory(dir);
+      this.addOutput(`Changed to directory: ${newDir}`);
+    } catch (error) {
+      this.addOutput(`Failed to change directory: ${error}`);
+    }
+  }
+
+  async goHome(): Promise<void> {
+    try {
+      const homeDir = await this.fileService.goHome();
+      this.addOutput(`Moved to home directory: ${homeDir}`);
+    } catch (error) {
+      this.addOutput(`Failed to go home: ${error}`);
+    }
+  }
+
+  async removeFile(fileName: string): Promise<void> {
+    try {
+      await this.fileService.removeFile(fileName);
+      this.addOutput(`File removed: ${fileName}`);
+    } catch (error) {
+      this.addOutput(`Failed to remove file: ${error}`);
+    }
+  }
+
+  async moveFile(
+    fromPath: string,
+    toPath: string,
+    useSudo: boolean = false
+  ): Promise<void> {
+    try {
+      await this.fileService.moveFile(fromPath, toPath, useSudo);
+      this.addOutput(`File moved from ${fromPath} to ${toPath}`);
+    } catch (error) {
+      this.addOutput(`Failed to move file: ${error}`);
+    }
+  }
+
+  async copyFile(
+    fromPath: string,
+    toPath: string,
+    useSudo: boolean = false
+  ): Promise<void> {
+    try {
+      await this.fileService.copyFile(fromPath, toPath, useSudo);
+      this.addOutput(`File copied from ${fromPath} to ${toPath}`);
+    } catch (error) {
+      this.addOutput(`Failed to copy file: ${error}`);
+    }
+  }
+
+  async removeFileAndList(fileName: string): Promise<void> {
+    try {
+      await this.fileService.removeFileAndList(fileName);
+      this.addOutput(`File removed and directory listed: ${fileName}`);
+    } catch (error) {
+      this.addOutput(`Failed to remove file and list: ${error}`);
+    }
+  }
+
+  async fileExists(fileName: string): Promise<void> {
+    try {
+      const exists = await this.fileService.fileExists(fileName);
+      this.addOutput(
+        `File ${fileName} ${exists ? 'exists' : 'does not exist'}`
+      );
+    } catch (error) {
+      this.addOutput(`Failed to check file existence: ${error}`);
+    }
+  }
+
+  async isTextFile(path: string): Promise<void> {
+    try {
+      const isText = await this.fileService.isTextFile(path);
+      this.addOutput(`File ${path} is ${isText ? 'text' : 'binary'}`);
+    } catch (error) {
+      this.addOutput(`Failed to check file type: ${error}`);
+    }
+  }
+
+  async getFile(path: string, size?: number): Promise<void> {
+    try {
+      const content = await this.fileService.getFile(path, size);
+      if (typeof content === 'string') {
+        this.addOutput(`File content (${path}):\n${content}`);
+      } else {
+        this.addOutput(
+          `Binary file content (${path}): ${content.byteLength} bytes`
+        );
+      }
+    } catch (error) {
+      this.addOutput(`Failed to get file: ${error}`);
+    }
+  }
+
+  async saveFileBinary(buffer: ArrayBuffer, fileName: string): Promise<void> {
+    try {
+      await this.fileService.saveFileBinary(buffer, fileName);
+      this.addOutput(`Binary file saved: ${fileName}`);
+    } catch (error) {
+      this.addOutput(`Failed to save binary file: ${error}`);
+    }
+  }
+
+  async showFile(
+    fileName: string,
+    size: number,
+    editFlg: boolean
+  ): Promise<void> {
+    try {
+      await this.editorService.showFile(fileName, size, editFlg);
+      this.addOutput(`File displayed: ${fileName}`);
+    } catch (error) {
+      this.addOutput(`Failed to show file: ${error}`);
+    }
+  }
+
+  async createNewText(fileName: string): Promise<void> {
+    try {
+      await this.editorService.createNewText(fileName);
+      this.addOutput(`New text file created: ${fileName}`);
+    } catch (error) {
+      this.addOutput(`Failed to create new text: ${error}`);
+    }
+  }
+
+  async saveEditedText(srcTxt: string, sourcePath: any): Promise<void> {
+    try {
+      await this.editorService.saveEditedText(srcTxt, sourcePath);
+      this.addOutput(`Edited text saved: ${sourcePath.fileName}`);
+    } catch (error) {
+      this.addOutput(`Failed to save edited text: ${error}`);
     }
   }
 
@@ -250,6 +406,60 @@ export class AppComponent implements OnInit {
       this.addOutput(`WiFi configured for ${ssid}`);
     } catch (error) {
       this.addOutput(`Failed to set WiFi: ${error}`);
+    }
+  }
+
+  async configureWifi(ssid: string, password: string): Promise<void> {
+    try {
+      await this.wifiService.configureWifi(ssid, password);
+      this.addOutput(`WiFi configured for ${ssid}`);
+    } catch (error) {
+      this.addOutput(`Failed to configure WiFi: ${error}`);
+    }
+  }
+
+  async getWifiStatus(): Promise<void> {
+    try {
+      const status = await this.wifiService.getWifiStatus();
+      this.addOutput(`WiFi Status:\n${status}`);
+    } catch (error) {
+      this.addOutput(`Failed to get WiFi status: ${error}`);
+    }
+  }
+
+  async enableWifi(): Promise<void> {
+    try {
+      await this.wifiService.enableWifi();
+      this.addOutput('WiFi enabled');
+    } catch (error) {
+      this.addOutput(`Failed to enable WiFi: ${error}`);
+    }
+  }
+
+  async disableWifi(): Promise<void> {
+    try {
+      await this.wifiService.disableWifi();
+      this.addOutput('WiFi disabled');
+    } catch (error) {
+      this.addOutput(`Failed to disable WiFi: ${error}`);
+    }
+  }
+
+  async getIpAddress(): Promise<void> {
+    try {
+      const ip = await this.wifiService.getIpAddress();
+      this.addOutput(`IP Address: ${ip}`);
+    } catch (error) {
+      this.addOutput(`Failed to get IP address: ${error}`);
+    }
+  }
+
+  async showNetworkConfig(): Promise<void> {
+    try {
+      const config = await this.wifiService.showNetworkConfig();
+      this.addOutput(`Network Config:\n${config}`);
+    } catch (error) {
+      this.addOutput(`Failed to show network config: ${error}`);
     }
   }
 

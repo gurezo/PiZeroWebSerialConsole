@@ -111,4 +111,73 @@ export class EditorService {
   getSourcePath(): SourcePath | null {
     return this.sourcePath;
   }
+
+  // File display methods
+  async showFile(
+    fileName: string,
+    size: number,
+    editFlg: boolean
+  ): Promise<void> {
+    try {
+      // ファイルの内容を取得
+      const content = await this.getFileContent(fileName, size);
+
+      if (content !== null) {
+        // エディタでファイルを表示
+        await this.editSrc(
+          content,
+          fileName,
+          this.getCurrentDirectory(),
+          editFlg
+        );
+      } else {
+        // 新規ファイルを作成
+        await this.editSrc('', fileName, this.getCurrentDirectory(), editFlg);
+      }
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new EditorError(`Failed to show file: ${errorMessage}`);
+    }
+  }
+
+  async getFileContent(fileName: string, size: number): Promise<string | null> {
+    try {
+      // ファイルサービスを使用してファイルの内容を取得
+      // ここでは簡易的な実装
+      return null;
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new EditorError(`Failed to get file content: ${errorMessage}`);
+    }
+  }
+
+  private getCurrentDirectory(): string {
+    // 現在のディレクトリを取得
+    // ここでは簡易的な実装
+    return '';
+  }
+
+  async createNewText(fileName: string): Promise<void> {
+    try {
+      await this.editSrc('', fileName, this.getCurrentDirectory(), true);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new EditorError(`Failed to create new text: ${errorMessage}`);
+    }
+  }
+
+  async saveEditedText(srcTxt: string, sourcePath: SourcePath): Promise<void> {
+    try {
+      // ファイルサービスを使用してファイルを保存
+      // ここでは簡易的な実装
+      console.log('Saving edited text:', srcTxt, 'to:', sourcePath);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new EditorError(`Failed to save edited text: ${errorMessage}`);
+    }
+  }
 }

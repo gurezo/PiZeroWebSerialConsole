@@ -184,4 +184,178 @@ fi
       throw new WiFiError(`Failed to reboot: ${errorMessage}`);
     }
   }
+
+  // Additional WiFi configuration methods
+  async configureWifi(ssid: string, password: string): Promise<void> {
+    try {
+      // wpa_supplicant設定ファイルを作成
+      const configContent = this.generateWpaSupplicantConfig(ssid, password);
+
+      // 設定ファイルを保存
+      await this.saveWifiConfig(configContent);
+
+      // WiFiサービスを再起動
+      await this.restartWifiService();
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new WiFiError(`WiFi configuration failed: ${errorMessage}`);
+    }
+  }
+
+  private generateWpaSupplicantConfig(ssid: string, password: string): string {
+    return `ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=JP
+
+network={
+    ssid="${ssid}"
+    psk="${password}"
+    key_mgmt=WPA-PSK
+}`;
+  }
+
+  private async saveWifiConfig(configContent: string): Promise<void> {
+    try {
+      // 既存の設定をバックアップ
+      await this.serialService.portWritelnWaitfor(
+        'sudo cp /etc/wpa_supplicant/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf.backup',
+        'pi@raspberrypi:',
+        10000
+      );
+
+      // 新しい設定を保存
+      const encoder = new TextEncoder();
+      const buffer = encoder.encode(configContent);
+
+      // base64エンコードして送信
+      const base64 = this.arrayBufferToBase64(buffer);
+
+      // Ctrl+Cでフォアグラウンドプロセスを停止
+      await this.serialService.write('\x03');
+      await this.sleep(100);
+
+      // 設定ファイルに保存
+      await this.serialService.portWritelnWaitfor(
+        'sudo tee /etc/wpa_supplicant/wpa_supplicant.conf > /dev/null',
+        '\n',
+        10000
+      );
+      await this.serialService.portWritelnWaitfor(base64, '\n', 1000);
+
+      // Ctrl+Dで入力終了
+      await this.serialService.write('\x04');
+      await this.sleep(10);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new WiFiError(`Failed to save WiFi config: ${errorMessage}`);
+    }
+  }
+
+  private async restartWifiService(): Promise<void> {
+    try {
+      await this.serialService.portWritelnWaitfor(
+        'sudo systemctl restart wpa_supplicant',
+        'pi@raspberrypi:',
+        10000
+      );
+      await this.serialService.portWritelnWaitfor(
+        'sudo systemctl restart networking',
+        'pi@raspberrypi:',
+        10000
+      );
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new WiFiError(`Failed to restart WiFi service: ${errorMessage}`);
+    }
+  }
+
+  async getWifiStatus(): Promise<string> {
+    try {
+      const result = await this.serialService.portWritelnWaitfor(
+        'iwconfig wlan0',
+        'pi@raspberrypi:',
+        10000
+      );
+      return result;
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new WiFiError(`Failed to get WiFi status: ${errorMessage}`);
+    }
+  }
+
+  async enableWifi(): Promise<void> {
+    try {
+      await this.serialService.portWritelnWaitfor(
+        'sudo ifconfig wlan0 up',
+        'pi@raspberrypi:',
+        10000
+      );
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new WiFiError(`Failed to enable WiFi: ${errorMessage}`);
+    }
+  }
+
+  async disableWifi(): Promise<void> {
+    try {
+      await this.serialService.portWritelnWaitfor(
+        'sudo ifconfig wlan0 down',
+        'pi@raspberrypi:',
+        10000
+      );
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new WiFiError(`Failed to disable WiFi: ${errorMessage}`);
+    }
+  }
+
+  async getIpAddress(): Promise<string> {
+    try {
+      const result = await this.serialService.portWritelnWaitfor(
+        'hostname -I',
+        'pi@raspberrypi:',
+        10000
+      );
+      const lines = result.split('\n');
+      return lines[0]?.trim() || '';
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new WiFiError(`Failed to get IP address: ${errorMessage}`);
+    }
+  }
+
+  async showNetworkConfig(): Promise<string> {
+    try {
+      const result = await this.serialService.portWritelnWaitfor(
+        'cat /etc/network/interfaces',
+        'pi@raspberrypi:',
+        10000
+      );
+      return result;
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new WiFiError(`Failed to show network config: ${errorMessage}`);
+    }
+  }
+
+  private arrayBufferToBase64(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  private async sleep(msec: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, msec));
+  }
 }
