@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { SerialError } from '../utils/serial.errors';
 import { SerialService } from './serial.service';
 
@@ -21,8 +21,7 @@ export class LoginService {
     commandPrompt: 'pi@raspberrypi:',
     language: 'en',
   };
-
-  constructor(private serialService: SerialService) {}
+  private readonly serialService = inject(SerialService);
 
   /**
    * 自動ログイン処理を実行

@@ -1,6 +1,6 @@
 /// <reference types="@types/w3c-web-serial" />
 
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { SerialPortWrapper } from '../types';
 import { SerialError } from '../utils/serial.errors';
 import {
@@ -16,8 +16,7 @@ export class SerialService {
   private isConnected = false;
   private isTerminalRunning = false;
   private terminalCallback: ((data: Uint8Array) => void) | null = null;
-
-  constructor(private commandExecutor: CommandExecutorService) {}
+  private readonly commandExecutor = inject(CommandExecutorService);
 
   // Connection Management
   async connect(): Promise<void> {

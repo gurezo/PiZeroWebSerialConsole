@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { FileError } from '../utils/serial.errors';
 import { SerialService } from './serial.service';
 
@@ -30,8 +30,7 @@ export class FileContentService {
     '.py',
     '.php',
   ];
-
-  constructor(private serialService: SerialService) {}
+  private readonly serialService = inject(SerialService);
 
   /**
    * ファイルの内容を取得

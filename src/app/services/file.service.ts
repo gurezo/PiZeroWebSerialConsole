@@ -11,8 +11,6 @@ import { SerialService } from './serial.service';
 export class FileService {
   private readonly serialService = inject(SerialService);
 
-  constructor() {}
-
   async saveFile(data: ArrayBuffer, fileName: string): Promise<void> {
     try {
       const dataStr = arrayBufferToString(data);

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { FileError } from '../utils/serial.errors';
 import { SerialService } from './serial.service';
 
@@ -12,7 +12,7 @@ export interface FileOperationResult {
   providedIn: 'root',
 })
 export class FileOperationService {
-  constructor(private serialService: SerialService) {}
+  private readonly serialService = inject(SerialService);
 
   /**
    * ファイルを削除

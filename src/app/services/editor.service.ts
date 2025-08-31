@@ -12,10 +12,6 @@ export class EditorService {
   private saveDisabled = false;
   private sourcePath: SourcePath | null = null;
 
-  constructor() {
-    this.initializeEditor();
-  }
-
   private initializeEditor(): void {
     // Monaco Editorの初期化処理
     // TODO: Monaco Editorの初期化を実装

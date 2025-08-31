@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { FileError } from '../utils/serial.errors';
 import { SerialService } from './serial.service';
 
@@ -13,8 +13,7 @@ export interface DirectoryInfo {
 export class DirectoryService {
   private currentDir = '';
   private absolutePath = '';
-
-  constructor(private serialService: SerialService) {}
+  private readonly serialService = inject(SerialService);
 
   /**
    * 現在のディレクトリを取得

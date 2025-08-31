@@ -12,8 +12,6 @@ export class WiFiService {
   private serialService = inject(SerialService);
   private fileService = inject(FileService);
 
-  constructor() {}
-
   async wifiStat(): Promise<{
     ipInfo: string;
     wlInfo: string;
