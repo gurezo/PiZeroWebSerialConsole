@@ -1,8 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { ChirimenService } from './services/chirimen.service';
+import { DirectoryService } from './services/directory.service';
 import { EditorService } from './services/editor.service';
+import { FileContentService } from './services/file-content.service';
+import { FileOperationService } from './services/file-operation.service';
 import { FileService } from './services/file.service';
+import { LoginService } from './services/login.service';
 import { SerialService } from './services/serial.service';
 import { WiFiService } from './services/wifi.service';
 
@@ -148,7 +152,11 @@ export class AppComponent implements OnInit {
     private fileService: FileService,
     private editorService: EditorService,
     private wifiService: WiFiService,
-    private chirimenService: ChirimenService
+    private chirimenService: ChirimenService,
+    private loginService: LoginService,
+    private directoryService: DirectoryService,
+    private fileOperationService: FileOperationService,
+    private fileContentService: FileContentService
   ) {}
 
   ngOnInit(): void {
@@ -167,7 +175,7 @@ export class AppComponent implements OnInit {
 
   async autoLogin(): Promise<void> {
     try {
-      await this.serialService.autoLogin();
+      await this.loginService.autoLogin();
       this.isConnected = true;
       this.addOutput('Auto login completed successfully');
     } catch (error) {
@@ -196,7 +204,7 @@ export class AppComponent implements OnInit {
 
   async getCurrentDirectory(): Promise<void> {
     try {
-      const currentDir = await this.fileService.getCurrentDirectory();
+      const currentDir = await this.directoryService.getCurrentDirectory();
       this.addOutput(`Current directory: ${currentDir}`);
     } catch (error) {
       this.addOutput(`Failed to get current directory: ${error}`);
@@ -205,7 +213,7 @@ export class AppComponent implements OnInit {
 
   async changeDirectory(dir?: string): Promise<void> {
     try {
-      const newDir = await this.fileService.changeDirectory(dir);
+      const newDir = await this.directoryService.changeDirectory(dir);
       this.addOutput(`Changed to directory: ${newDir}`);
     } catch (error) {
       this.addOutput(`Failed to change directory: ${error}`);
@@ -214,7 +222,7 @@ export class AppComponent implements OnInit {
 
   async goHome(): Promise<void> {
     try {
-      const homeDir = await this.fileService.goHome();
+      const homeDir = await this.directoryService.goHome();
       this.addOutput(`Moved to home directory: ${homeDir}`);
     } catch (error) {
       this.addOutput(`Failed to go home: ${error}`);
@@ -223,8 +231,8 @@ export class AppComponent implements OnInit {
 
   async removeFile(fileName: string): Promise<void> {
     try {
-      await this.fileService.removeFile(fileName);
-      this.addOutput(`File removed: ${fileName}`);
+      const result = await this.fileOperationService.removeFile(fileName);
+      this.addOutput(result.message);
     } catch (error) {
       this.addOutput(`Failed to remove file: ${error}`);
     }
@@ -236,8 +244,12 @@ export class AppComponent implements OnInit {
     useSudo: boolean = false
   ): Promise<void> {
     try {
-      await this.fileService.moveFile(fromPath, toPath, useSudo);
-      this.addOutput(`File moved from ${fromPath} to ${toPath}`);
+      const result = await this.fileOperationService.moveFile(
+        fromPath,
+        toPath,
+        useSudo
+      );
+      this.addOutput(result.message);
     } catch (error) {
       this.addOutput(`Failed to move file: ${error}`);
     }
@@ -249,8 +261,12 @@ export class AppComponent implements OnInit {
     useSudo: boolean = false
   ): Promise<void> {
     try {
-      await this.fileService.copyFile(fromPath, toPath, useSudo);
-      this.addOutput(`File copied from ${fromPath} to ${toPath}`);
+      const result = await this.fileOperationService.copyFile(
+        fromPath,
+        toPath,
+        useSudo
+      );
+      this.addOutput(result.message);
     } catch (error) {
       this.addOutput(`Failed to copy file: ${error}`);
     }
@@ -258,7 +274,8 @@ export class AppComponent implements OnInit {
 
   async removeFileAndList(fileName: string): Promise<void> {
     try {
-      await this.fileService.removeFileAndList(fileName);
+      await this.fileOperationService.removeFile(fileName);
+      await this.showDir();
       this.addOutput(`File removed and directory listed: ${fileName}`);
     } catch (error) {
       this.addOutput(`Failed to remove file and list: ${error}`);
@@ -267,7 +284,8 @@ export class AppComponent implements OnInit {
 
   async fileExists(fileName: string): Promise<void> {
     try {
-      const exists = await this.fileService.fileExists(fileName);
+      const { files } = await this.fileService.listAll();
+      const exists = files.some((file) => file.name === fileName);
       this.addOutput(
         `File ${fileName} ${exists ? 'exists' : 'does not exist'}`
       );
@@ -278,7 +296,7 @@ export class AppComponent implements OnInit {
 
   async isTextFile(path: string): Promise<void> {
     try {
-      const isText = await this.fileService.isTextFile(path);
+      const isText = await this.fileContentService.isTextFile(path);
       this.addOutput(`File ${path} is ${isText ? 'text' : 'binary'}`);
     } catch (error) {
       this.addOutput(`Failed to check file type: ${error}`);
@@ -287,12 +305,15 @@ export class AppComponent implements OnInit {
 
   async getFile(path: string, size?: number): Promise<void> {
     try {
-      const content = await this.fileService.getFile(path, size);
-      if (typeof content === 'string') {
-        this.addOutput(`File content (${path}):\n${content}`);
+      const contentInfo = await this.fileContentService.getFileContent(
+        path,
+        size
+      );
+      if (contentInfo.isText) {
+        this.addOutput(`File content (${path}):\n${contentInfo.content}`);
       } else {
         this.addOutput(
-          `Binary file content (${path}): ${content.byteLength} bytes`
+          `Binary file content (${path}): ${contentInfo.size} bytes`
         );
       }
     } catch (error) {
@@ -302,7 +323,7 @@ export class AppComponent implements OnInit {
 
   async saveFileBinary(buffer: ArrayBuffer, fileName: string): Promise<void> {
     try {
-      await this.fileService.saveFileBinary(buffer, fileName);
+      await this.fileContentService.saveBinaryFile(buffer, fileName);
       this.addOutput(`Binary file saved: ${fileName}`);
     } catch (error) {
       this.addOutput(`Failed to save binary file: ${error}`);
